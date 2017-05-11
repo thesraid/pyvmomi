@@ -1,0 +1,157 @@
+#!/usr/bin/env python
+
+"""
+Program to authenticate and print VM details
+"""
+
+import atexit
+import argparse
+import getpass
+
+# Ignore SSL warnings
+# http://pyvmomi.2338814.n4.nabble.com/Connect-to-esxi-host-with-self-Signed-certificate-td21.html
+import requests
+requests.packages.urllib3.disable_warnings()
+
+import ssl
+
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    # Legacy Python that doesn't verify HTTPS certificates by default
+    pass
+else:
+    # Handle target environment that doesn't support HTTPS verification
+    ssl._create_default_https_context = _create_unverified_https_context
+
+from pyVim import connect
+from pyVmomi import vmodl
+
+# We are recursing throw folder to this depth
+MAX_DEPTH = 10
+
+def get_args():
+    """Get command line args from the user.
+    """
+    parser = argparse.ArgumentParser(
+        description='Standard Arguments for talking to vCenter')
+
+    # because -h is reserved for 'help' we use -s for service
+    parser.add_argument('-s', '--host',
+                        required=True,
+                        action='store',
+                        help='vSphere service to connect to')
+
+    # because we want -p for password, we use -o for port
+    parser.add_argument('-o', '--port',
+                        type=int,
+                        default=443,
+                        action='store',
+                        help='Port to connect on')
+
+    parser.add_argument('-u', '--user',
+                        required=True,
+                        action='store',
+                        help='User name to use when connecting to host')
+
+    parser.add_argument('-p', '--password',
+                        required=False,
+                        action='store',
+                        help='Password to use when connecting to host')
+
+    parser.add_argument('-f', '--folder',
+                        required=True,
+                        action='store',
+                        help='VM Folder to list')
+
+
+    args = parser.parse_args()
+
+    if not args.password:
+        args.password = getpass.getpass(
+            prompt='Enter password for host %s and user %s: ' %
+                   (args.host, args.user))
+    return args
+
+def printvminfo(vm, FOLDER, depth=1):
+    """
+    Print information for a particular virtual machine or recurse into a folder
+    with depth protection
+    """
+    # if this is a group it will have children. if it does, recurse into them
+    # and then return
+    if hasattr(vm, 'childEntity'):
+        if depth > MAX_DEPTH:
+            return
+        vmlist = vm.childEntity
+        for child in vmlist:
+	# We are recursively calling this method again
+            printvminfo(child, FOLDER, depth+1)
+        return
+
+    # Only if the VMs partent folder name equals the one supplied will we print the results
+    if vm.parent.name == FOLDER:
+    	summary = vm.summary
+    	print(summary.config.name)
+
+
+def main():
+    """
+    Simple command-line program for listing the virtual machines on a system.
+    """
+
+    args = get_args()
+
+    try:
+        service_instance = connect.SmartConnect(host=args.host,
+                                                user=args.user,
+                                                pwd=args.password,
+                                                port=int(args.port))
+
+        atexit.register(connect.Disconnect, service_instance)
+	
+	print " "
+	session_name = service_instance.content.sessionManager.currentSession.fullName
+        print "Hello {}".format(session_name)
+        print "You have successfully logged into {}".format(args.host)
+        # NOTE (hartsock): only a successfully authenticated session has a
+        # session key aka session id.
+	print " "
+	print " "	
+
+	"""
+	# Print list of VMs in the V6 Production Sensors folder
+        content = service_instance.RetrieveContent()
+	datacenter = service_instance.content.rootFolder.childEntity[0]
+	vms = datacenter.vmFolder.childEntity[13].childEntity[2].childEntity[1].childEntity
+	for vm in vms:
+    	      print(vm.name)
+	"""
+
+	# For each folder in the root call printvminfo
+ 	# This will print out the VMs in each folder
+ 	# If their parent folder is FOLDER
+	FOLDER = args.folder
+	content = service_instance.RetrieveContent()
+ 	for child in content.rootFolder.childEntity:
+           if hasattr(child, 'vmFolder'):
+              datacenter = child
+              vmfolder = datacenter.vmFolder
+              vmlist = vmfolder.childEntity
+              for vm in vmlist:
+                 #print vm.name
+		 printvminfo(vm, FOLDER)
+
+	print " "
+	print " "
+    except vmodl.MethodFault as error:
+        #print "Caught vmodl fault : " + error.msg
+        print error.msg
+	return -1
+
+    return 0
+
+# Start program
+if __name__ == "__main__":
+    main()
+
