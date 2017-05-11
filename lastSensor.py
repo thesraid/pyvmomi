@@ -3,6 +3,14 @@
 """
 Program to authenticate and print VM details
 """
+import sys
+from datetime import date, datetime, timedelta
+from shutil import copyfile
+import os
+import subprocess
+import syslog
+import time
+import re
 
 import atexit
 import argparse
@@ -123,12 +131,36 @@ def main():
         folder = get_obj(content, [vim.Folder], FOLDER)
 	# If the folder was found list it's contents
 	if folder is not None:
-	   print folder.parent.name
+           listTemplates = ""
+           templateList = []
+	   #print folder.parent.name
            # We will add all of the childObjects of the folder to a variable
 	   vms = folder.childEntity
            # Iterate through the VMs in the folder printing the names
 	   for vm in vms:
-              print(vm.name)
+	      #name = vm.name
+              listTemplates = listTemplates + vm.name
+
+	   # Search the results for the date portion of the template name
+	   for template in listTemplates.split("\n"):
+              if "USMA_Sensor" in template:
+   	         match = re.search('\d\d\d\d-\d\d-\d\d', template)
+  	      else:
+		 print "Error: No Templates with the name USM_Sensor found"
+		 exit()
+
+	   # If it's a match add it to the list
+   	   if match:
+     	     date_string = match.group()
+     	     date = datetime.strptime(date_string, '%Y-%m-%d')
+     	     templateList.append(date)
+
+	   # Find the latest date
+	   last_sensor_date = max(templateList)
+	   last_sensor = last_sensor_date.strftime('%Y-%m-%d')
+
+	   print "Last sensor on VMware is: " + last_sensor
+
 	else:
 	   print "Folder", FOLDER, "not found"
 

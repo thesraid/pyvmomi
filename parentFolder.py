@@ -123,12 +123,15 @@ def main():
         folder = get_obj(content, [vim.Folder], FOLDER)
 	# If the folder was found list it's contents
 	if folder is not None:
-	   print folder.parent.name
-           # We will add all of the childObjects of the folder to a variable
-	   vms = folder.childEntity
-           # Iterate through the VMs in the folder printing the names
-	   for vm in vms:
-              print(vm.name)
+	   depth = 5
+	   while folder.name != "vm":
+              if depth != 0:
+	         print folder.name
+                 folder = folder.parent	   
+		 depth = depth-1
+	      else:
+		 print "Error: Specified folder is nested in too many subdirectories (max: 5)"
+		 return -1
 	else:
 	   print "Folder", FOLDER, "not found"
 

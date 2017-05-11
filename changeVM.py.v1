@@ -58,10 +58,10 @@ def get_args():
                         action='store',
                         help='Password to use when connecting to host')
 
-    parser.add_argument('-f', '--folder',
+    parser.add_argument('-v', '--vm',
                         required=True,
                         action='store',
-                        help='Folder to list')
+                        help='VM to display')
 
 
     args = parser.parse_args()
@@ -115,22 +115,59 @@ def main():
 	print " "	
 
 	# Print list of VMs in the specified folder
-        FOLDER = args.folder
+        VM = args.vm
 	# This dumps all of the vCenter data into an object
 	content = service_instance.RetrieveContent()
 	# get_obj is defined above. It searchs through the content for the specified folder
 	# It returns a folder object
-        folder = get_obj(content, [vim.Folder], FOLDER)
+        vm = get_obj(content, [vim.VirtualMachine], VM)
 	# If the folder was found list it's contents
-	if folder is not None:
-	   print folder.parent.name
+	if vm is not None:
            # We will add all of the childObjects of the folder to a variable
-	   vms = folder.childEntity
+	   #s = folder.childEntity
            # Iterate through the VMs in the folder printing the names
-	   for vm in vms:
-              print(vm.name)
+	   #for vm in vms:
+           print "Changing Mem and Cpu for ",vm.name
+	   if vm.runtime.powerState != "poweredOff":
+	      print "Error: VM is not powered off. Current State is",vm.runtime.powerState
+	      return -1
+	   cspec = vim.vm.ConfigSpec()
+	   cspec.numCPUs = 4 # if you want 4 cpus
+	   cspec.numCoresPerSocket = 1 # if you want dual-processor with dual-cores
+	   cspec.memoryMB = 8192 # 1GB of memory
+	   vm.Reconfigure(cspec)
+	   print "Reduced RAM and CPU"
+	   for dev in vm.config.hardware.device:
+              if dev.deviceInfo.label == 'Network adapter 1':
+		virtual_nic_device = dev
+                # print virtual_nic_device
+	 	virtual_nic_spec = vim.vm.device.VirtualDeviceSpec()
+		virtual_nic_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
+		virtual_nic_spec.device = virtual_nic_device
+		virtual_nic_spec.device.macAddress = '00:50:56:12:34:56'
+		virtual_nic_spec.device.addressType = 'manual'  
+		dev_changes = []
+		dev_changes.append(virtual_nic_spec)
+		spec = vim.vm.ConfigSpec()
+    		spec.deviceChange = dev_changes
+    		vm.ReconfigVM_Task(spec=spec)
+		print "Changed NIC MAC to static"
+
+	   #nics = vim.vm.device.VirtualEthernetCard()
+	   #print nics
+	   # for dev in vm.config.hardware.device:
+              # if dev.deviceInfo.label=='Network adapter 1':
+              #   print dev
+	      #	  print "SPEC", vim.vm.device.VirtualDeviceSpec()
+	      #	  nic = vim.vm.device.VirtualDeviceSpec()
+	      #	  nic.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
+	      #	  print "Old MAC", vim.vm.device.VirtualVmxnet3()
+
 	else:
-	   print "Folder", FOLDER, "not found"
+	   print "Error:", VM, "not found"
+	   return -1
+
+
 
     except vmodl.MethodFault as error:
         #print "Caught vmodl fault : " + error.msg
