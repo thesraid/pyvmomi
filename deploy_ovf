@@ -1,0 +1,1 @@
+ovftool --noSSLVerify --disableVerification --datastore=AWC-004 --network="MGMT" --vmFolder=_Templates_/v6_Templates/Production_Sensor_Image --diskMode=thin ova/small.ova --name=JOHNTEST vi://'joriordan@nil.si':Password123@awc.nil.com/AV/host/AWC/awc-esx01.nil.com
