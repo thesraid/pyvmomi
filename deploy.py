@@ -157,6 +157,26 @@ def get_obj(content, vimtype, name):
 
 #########################################################################################################
 
+def get_vm_in_folder(content, vimtype, name, folder):
+    """
+    Return an object by name, if name is None the
+    first found object is returned
+    """
+    obj = None
+    container = content.viewManager.CreateContainerView(
+        content.rootFolder, vimtype, True)
+    for c in container.view:
+        if name:
+            if (c.name == name) and (c.parent.name == folder):
+                obj = c
+                break
+        else:
+            obj = c
+            break
+    return obj
+
+#########################################################################################################
+
 def parentFolders(folder):
 
    """
@@ -195,7 +215,7 @@ def uploadOVF(folderPath, vm, DOWNLOAD):
    # Requires ovftool to be installed
    bashCommand = "ovftool --skipManifestCheck --noSSLVerify --disableVerification --datastore=AWC-004 --network='MGMT' --name=" + vm + " --vmFolder=" + folderPath + " --diskMode=thin " + DOWNLOAD + "/alienvault-usm/USM_sensor-node.ovf vi://'" + user + "':" + pwd + "@" + host + ESXPATH
    print "Info: Deploying", vm, "to", folderPath
-   print bashCommand
+   #print bashCommand
    os.system(bashCommand) 
 
 
@@ -341,15 +361,15 @@ def downloadSensor(download):
 
    # Download the sensor
    print "Info: Downloading sensor from", URL
-   bashCommand = 'wget -O ' + download + 'usm-anywhere-sensor-vmware.zip ' + URL
-   #bashCommand = 'wget -O ' + download + 'usm-anywhere-sensor-vmware.zip https://hotel.zzzz.io/tmp/small.zip'
+   bashCommand = 'wget -O ' + download + '/usm-anywhere-sensor-vmware.zip ' + URL
+   #bashCommand = 'wget -O ' + download + '/usm-anywhere-sensor-vmware.zip https://hotel.zzzz.io/tmp/small.zip'
    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
    curloutput = process.communicate()[0]
 
 
    # unzip the sensor
-   print "Info: Unzipping", download, "usm-anywhere-sensor-vmware.zip"
-   bashCommand = 'unzip -o -d ' + download + ' ' + download + 'usm-anywhere-sensor-vmware.zip'
+   print "Info: Unzipping", download, "/usm-anywhere-sensor-vmware.zip"
+   bashCommand = 'unzip -o -d ' + download + ' ' + download + '/usm-anywhere-sensor-vmware.zip'
    #print bashCommand
    #process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
    #while process.poll() is None:
@@ -422,7 +442,7 @@ def main():
         print ""
         print "Hello {}".format(session_name)
         print "You have successfully logged into {}".format(args.host)
-	print "Info: Session key", service_instance.content.sessionManager.currentSession.key
+	#print "Info: Session key", service_instance.content.sessionManager.currentSession.key
 
 	FOLDER = args.folder
         DOWNLOAD = args.download
@@ -458,7 +478,7 @@ def main():
 	
 	      # The download & upload will take a while so lets close out the vCenter connection as it times out after 15 minutes
               connect.Disconnect(service_instance)
-	      print "Info: Logged Out"
+	      #print "Info: Logged Out"
 
 	      version = downloadSensor(DOWNLOAD)
 	      
@@ -474,10 +494,10 @@ def main():
 
               atexit.register(connect.Disconnect, service_instance)
 
-              print "Info: Session key", service_instance.content.sessionManager.currentSession.key
-              print "Info: Username", service_instance.content.sessionManager.currentSession.userName
-              print ""
-              print " "
+              #print "Info: Session key", service_instance.content.sessionManager.currentSession.key
+              #print "Info: Username", service_instance.content.sessionManager.currentSession.userName
+              #print ""
+              #print " "
 
 
               # This dumps all of the vCenter data into an object
@@ -487,7 +507,7 @@ def main():
               print "Error: Folder", FOLDER, "not found"
               return -1
 
-           vm = get_obj(content, [vim.VirtualMachine], new_template)
+           vm = get_vm_in_folder(content, [vim.VirtualMachine], new_template, FOLDER)
 	   # If we found the specified VM we will edit it's hardware
 	   if vm is not None:
 	      print "Info: Found", vm.name, "in", vm.parent.name
@@ -495,10 +515,7 @@ def main():
 	         modifyHardware(vm)
                  vm.MarkAsTemplate()
 	      else:
-	         print "Error:", vm.name, "was found in a folder called", vm.parent.name, ": I expected it to be in", FOLDER 
-                 print "Error: Has somebody else already run this script and created a template in", vm.parent.name + "?"
- 		 print "Error: I have left a VM called", vm.name, "in", FOLDER, "but I have not modified its hardware"
-		 print "Error: Please determine which VM is correct and modify/delete as needed"
+	         print "Error:", vm.name, "was not found in", FOLDER 
 	         return -1
 	   else:
               print "Error:", new_template, "not found"
