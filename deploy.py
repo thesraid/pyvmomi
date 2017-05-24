@@ -60,7 +60,7 @@ Any of these can be changed if required
 RAM = 8192
 # Default number of CPUs to give the sensor
 # Can be edited at run time with -c
-CPU = 4
+CPU = 2
 # Default MAC address
 # Can be edited at run time with -m
 MAC = "00:50:56:12:34:56"
@@ -114,7 +114,7 @@ def get_args():
     parser.add_argument('-c', '--cpu',
                         required=False,
                         action='store',
-                        help='Num CPU (default 4)')
+                        help='Num CPU (default 2)')
 
     parser.add_argument('-m', '--mac',
                         required=False,
@@ -213,7 +213,7 @@ def uploadOVF(folderPath, vm, DOWNLOAD):
    pwd=args.password
    
    # Requires ovftool to be installed
-   bashCommand = "ovftool --skipManifestCheck --noSSLVerify --disableVerification --datastore=AWC-004 --network='MGMT' --name=" + vm + " --vmFolder=" + folderPath + " --diskMode=thin " + DOWNLOAD + "/alienvault-usm/USM_sensor-node.ovf vi://'" + user + "':" + pwd + "@" + host + ESXPATH
+   bashCommand = "ovftool --skipManifestCheck --noSSLVerify --disableVerification --datastore=AWC-004 --network='MGMT' --name=" + vm + " --vmFolder='" + folderPath + "' --diskMode=thin " + DOWNLOAD + "/alienvault-usm/USM_sensor-node.ovf vi://'" + user + "':" + pwd + "@" + host + ESXPATH
    print "Info: Deploying", vm, "to", folderPath
    #print bashCommand
    os.system(bashCommand) 
@@ -335,8 +335,8 @@ def lastSensor(content, FOLDER):
          if "USMA_Sensor" in template:
             match = re.search('\d\d\d\d-\d\d-\d\d', template)
          else:
-            print "Error: No Templates with the name USM_Sensor found"
-            return
+            print "Info: No Templates with the name USM_Sensor found"
+            return "1970-01-01"
 
       # If it's a match add it to the list
       if match:
@@ -444,6 +444,7 @@ def main():
         print "You have successfully logged into {}".format(args.host)
 	#print "Info: Session key", service_instance.content.sessionManager.currentSession.key
 
+	# TODO: Verify Folder exists
 	FOLDER = args.folder
         DOWNLOAD = args.download
 
@@ -479,12 +480,17 @@ def main():
 	      # The download & upload will take a while so lets close out the vCenter connection as it times out after 15 minutes
               connect.Disconnect(service_instance)
 	      #print "Info: Logged Out"
-
+	      
+              # Download the new sensor and mount it to get the version number
 	      version = downloadSensor(DOWNLOAD)
+
+	      # Convert the OVF to a VM so we can insert the SSH key for sysadmin
+   	      # newOVFPath = insertKey(DOWNLOAD) 
 	      
               new_template = "USMA_Sensor-" + version + "-" + current_sensor
               print "Info: New template name will be", new_template
 	      uploadOVF(folderPath, new_template, DOWNLOAD)
+	      #uploadOVF(newOVFPath, new_template, DOWNLOAD)
 
 	      # Now that we've finished downloading and uploading we will log back into vCenter
 	      service_instance = connect.SmartConnect(host=args.host,
