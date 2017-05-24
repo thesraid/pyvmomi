@@ -376,8 +376,8 @@ def downloadSensor(download):
    bashCommand = 'wget -O ' + download + '/ZIP/usm-anywhere-sensor-vmware.zip ' + URL
    #bashCommand = 'wget -O ' + download + '/usm-anywhere-sensor-vmware.zip https://hotel.zzzz.io/tmp/small.zip'
    print "Info:", bashCommand
-   #process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-   #curloutput = process.communicate()[0]
+   process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+   curloutput = process.communicate()[0]
 
 
    # unzip the sensor
@@ -446,6 +446,13 @@ def insertKey(DOWNLOAD):
    print "Info:", bashCommand
    os.system(bashCommand)
 
+   # Delete orginal ovf 
+   bashCommand = "rm -rf " + DOWNLOAD + "/OVF"
+   print "Info: Removing orginal OVF"
+   print "Info:", bashCommand
+   os.system(bashCommand)
+
+
    # Mount ovf
    bashCommand = 'guestmount -a ' + DOWNLOAD + '/VM/USM_sensor-node-disk1.vmdk -i --rw ' + DOWNLOAD + '/vmdkMount/'
    print 'Info: Mounting read/write'
@@ -473,10 +480,20 @@ def insertKey(DOWNLOAD):
    bashCommand = "ovftool " + DOWNLOAD + "/VM/USM_sensor-node.vmx " + DOWNLOAD + "/NewOVF/USM_sensor-node.ovf"
    os.system(bashCommand)
 
+   # Delete VM file
+   bashCommand = "rm -rf " + DOWNLOAD + "/VM"
+   print "Info: Removing the VM files"
+   print "Info:", bashCommand
+   os.system(bashCommand)
+
+
+#########################################################################################################
+
+def cleanup(DOWNLOAD):
    # Delete orginal ovf and VM files
-   #bashCommand = "rm -rf " + DOWNLOAD + "/VM; rm -rf " + DOWNLOAD + "/NewOVF; rm -rf " + DOWNLOAD + "/Mount"
-   #print bashCommand
-   #os.system(bashCommand)
+   bashCommand = "rm -rf " + DOWNLOAD + "/VM; rm -rf " + DOWNLOAD + "/NewOVF; rm -rf " + DOWNLOAD + "/vmdkMount; rm -rf " + DOWNLOAD + "/OVF"
+   print "Info:", bashCommand
+   os.system(bashCommand)
 
 
 #########################################################################################################
@@ -504,7 +521,6 @@ def main():
         print "You have successfully logged into {}".format(args.host)
 	#print "Info: Session key", service_instance.content.sessionManager.currentSession.key
 
-	# TODO: Verify Folder exists
 	FOLDER = args.folder
         DOWNLOAD = args.download
 
@@ -586,6 +602,11 @@ def main():
 	   else:
               print "Error:", new_template, "not found"
               return -1
+        
+
+           # Clean up all of the folders that we created
+           # We wll leave the ZIP behind as it will be overwritten the next time anyway
+           cleanup(DOWNLOAD)
 
         else:
            print "Info: No update required"
