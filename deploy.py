@@ -78,11 +78,11 @@ def get_args():
     parser = argparse.ArgumentParser(
         description='Standard Arguments for talking to vCenter')
 
-    # because -h is reserved for 'help' we use -s for service
+    # because -h is reserved for 'help' we use -s for server
     parser.add_argument('-s', '--host',
                         required=True,
                         action='store',
-                        help='vSphere service to connect to')
+                        help='vSphere server to connect to')
 
     # because we want -p for password, we use -o for port
     parser.add_argument('-o', '--port',
@@ -213,7 +213,7 @@ def uploadOVF(folderPath, vm, DOWNLOAD):
    pwd=args.password
    
    # Requires ovftool to be installed
-   bashCommand = "ovftool --skipManifestCheck --noSSLVerify --disableVerification --datastore=AWC-004 --network='MGMT' --name=" + vm + " --vmFolder='" + folderPath + "' --diskMode=thin " + DOWNLOAD + "/alienvault-usm/USM_sensor-node.ovf vi://'" + user + "':" + pwd + "@" + host + ESXPATH
+   bashCommand = "ovftool --skipManifestCheck --noSSLVerify --disableVerification --datastore=AWC-004 --network='MGMT' --name=" + vm + " --vmFolder='" + folderPath + "' --diskMode=thin " + DOWNLOAD + "/NewOVF/USM_sensor-node.ovf vi://'" + user + "':" + pwd + "@" + host + ESXPATH
    print "Info: Deploying", vm, "to", folderPath
    #print bashCommand
    os.system(bashCommand) 
@@ -361,16 +361,29 @@ def downloadSensor(download):
 
    # Download the sensor
    print "Info: Downloading sensor from", URL
-   bashCommand = 'wget -O ' + download + '/usm-anywhere-sensor-vmware.zip ' + URL
+
+   # Create the directories we will use
+   if not os.path.exists(download + '/ZIP'):
+      os.makedirs(download + '/ZIP')
+
+   if not os.path.exists(download + '/OVF'):
+      os.makedirs(download + '/OVF')
+
+   if not os.path.exists(download + '/vmdkMount'):
+      os.makedirs(download + '/vmdkMount')
+
+
+   bashCommand = 'wget -O ' + download + '/ZIP/usm-anywhere-sensor-vmware.zip ' + URL
    #bashCommand = 'wget -O ' + download + '/usm-anywhere-sensor-vmware.zip https://hotel.zzzz.io/tmp/small.zip'
-   process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-   curloutput = process.communicate()[0]
+   print "Info:", bashCommand
+   #process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+   #curloutput = process.communicate()[0]
 
 
    # unzip the sensor
-   print "Info: Unzipping", download, "/usm-anywhere-sensor-vmware.zip"
-   bashCommand = 'unzip -o -d ' + download + ' ' + download + '/usm-anywhere-sensor-vmware.zip'
-   #print bashCommand
+   print "Info: Unzipping", download, "/ZIP/usm-anywhere-sensor-vmware.zip"
+   bashCommand = 'unzip -o -d ' + download + '/OVF ' + download + '/ZIP/usm-anywhere-sensor-vmware.zip'
+   print "Info:", bashCommand
    #process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
    #while process.poll() is None:
    #   print process.stdout.readline() #give output from your execution/your own message
@@ -379,35 +392,32 @@ def downloadSensor(download):
    #curloutput = process.communicate()[0]
    os.system(bashCommand)
 
-   # create a mount in tmp
-   if not os.path.exists('/tmp/vmdkMount'):
-      os.makedirs('/tmp/vmdkMount')
-   
    # mount the VMDK
    # Mount the vmdk to the vmdkMount directory
-   print "Info: Mounting VMDK to /tmp/vmdkMount"
+   print "Info: Mounting VMDK to " + download + "/vmdkMount"
    #bashCommand = 'vmware-mount ./alienvault-usm/usm-disk1.vmdk 1 /tmp/vmdkMount/'
    #bashCommand = 'vmware-mount ' + download + '/alienvault-usm/usm-disk1.vmdk 1 /tmp/vmdkMount/'
-   bashCommand = 'guestmount -a ' + download + '/alienvault-usm/usm-disk1.vmdk -i --rw /tmp/vmdkMount/'
-   #print bashCommand
+   bashCommand = 'guestmount -a ' + download + '/OVF/alienvault-usm/usm-disk1.vmdk -i --rw ' + download + '/vmdkMount/'
+   print "Info:", bashCommand
    #process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
    #print process.communicate()[0]
    os.system(bashCommand)
 
    # Read the version number and store it as a var
-   if not os.path.exists('/tmp/vmdkMount/etc/alienvault/system_version'):
-      print "Error: Could not access system_version file in disk mounted to /tmp/vmdkMount"
+   if not os.path.exists(download + '/vmdkMount/etc/alienvault/system_version'):
+      print "Error: Could not access system_version file in disk mounted to " + download + "/vmdkMount"
       print "Error: Perhaps the extraction of the downloaded zip file failed"
       print "Error: Or perhaps the zip file was not a valid USM Anywhere Sensor"
       exit()
 
-   with open('/tmp/vmdkMount/etc/alienvault/system_version', 'r') as myfile:
+   with open(download + '/vmdkMount/etc/alienvault/system_version', 'r') as myfile:
       version=myfile.read().replace('\n', '')
    print "Info: Version", version, "detected"
 
    # Unmount the vmdk
    print "Info: Unmounting VMDK"
-   bashCommand = 'guestunmount /tmp/vmdkMount'
+   print "Info:", bashCommand
+   bashCommand = 'guestunmount ' + download + '/vmdkMount'
    #bashCommand = 'vmware-mount -d /tmp/vmdkMount/'
    #process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
    #print process.communicate()[0]
@@ -418,6 +428,56 @@ def downloadSensor(download):
    # Make Sensor name
    #new_template = "USMA_Sensor-" + version + "-" + current_sensor
    
+
+#########################################################################################################
+
+def insertKey(DOWNLOAD):
+
+   SSH_KEY = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDNeK3OFirnHQaAkkGTcRSsTGjWQNqvr758+tQnq2Q5WtIJjH/zRqHC2t7JPeJXlIbgFe+/BsRUC0W6Yurdca/V9wFpwdJNFjdHhc3sKFMoPHT9cV7x1tahyjAFbzPPxCFVJdtAIDsayGFeN2luugehzB9rxaE5hdd3zr7ky+cAde7ComB58iGBSD1i72FIkW/aj39PEU6f86ignOvZBXaAcziYUI4/qSEBiHDpSU7u+Wm8ZeNOdonVPh4oMT0eKczEVd5RSw9YcdfRrW5qdbESolYAlGF28LIf92qVSrGcmfsOmiU7HQvlAHUAcOp+HPrARsLWCn8O1ho34m6UretR joriordan@alienvault.com"
+
+   # Create subdirectory for vm
+   if not os.path.exists(DOWNLOAD + '/VM'):
+      os.makedirs(DOWNLOAD + '/VM')
+   print "Info: Created", DOWNLOAD + "/VM"
+
+   # Convert to VM
+   bashCommand = "ovftool " + DOWNLOAD + "/OVF/alienvault-usm/USM_sensor-node.ovf " + DOWNLOAD + "/VM/USM_sensor-node.vmx"
+   print "Info: Converting to VM...."
+   print "Info:", bashCommand
+   os.system(bashCommand)
+
+   # Mount ovf
+   bashCommand = 'guestmount -a ' + DOWNLOAD + '/VM/USM_sensor-node-disk1.vmdk -i --rw ' + DOWNLOAD + '/vmdkMount/'
+   print 'Info: Mounting read/write'
+   print "Info:", bashCommand
+   os.system(bashCommand)
+
+   # Create folder and file with text
+   os.makedirs(DOWNLOAD + '/vmdkMount/home/sysadmin/.ssh')
+   f = open(DOWNLOAD + '/vmdkMount/home/sysadmin/.ssh/authorized_keys','w')
+   f.write(SSH_KEY)
+   f.close()
+   print 'Info: Wrote the SSH key'
+
+   # Unmount folder
+   bashCommand = 'guestunmount ' + DOWNLOAD + '/vmdkMount/'
+   os.system(bashCommand)
+   print 'Info: Unmounted the mount'
+
+   # Convert to new ovf in subfolder
+   if not os.path.exists(DOWNLOAD + '/NewOVF'):
+      os.makedirs(DOWNLOAD + '/NewOVF')
+   print "Info: Created ", DOWNLOAD + "/NewOVF"
+
+   print "Info: Repackaging the VM into a new OVF"
+   bashCommand = "ovftool " + DOWNLOAD + "/VM/USM_sensor-node.vmx " + DOWNLOAD + "/NewOVF/USM_sensor-node.ovf"
+   os.system(bashCommand)
+
+   # Delete orginal ovf and VM files
+   #bashCommand = "rm -rf " + DOWNLOAD + "/VM; rm -rf " + DOWNLOAD + "/NewOVF; rm -rf " + DOWNLOAD + "/Mount"
+   #print bashCommand
+   #os.system(bashCommand)
+
 
 #########################################################################################################
 
@@ -485,7 +545,7 @@ def main():
 	      version = downloadSensor(DOWNLOAD)
 
 	      # Convert the OVF to a VM so we can insert the SSH key for sysadmin
-   	      # newOVFPath = insertKey(DOWNLOAD) 
+   	      insertKey(DOWNLOAD) 
 	      
               new_template = "USMA_Sensor-" + version + "-" + current_sensor
               print "Info: New template name will be", new_template
