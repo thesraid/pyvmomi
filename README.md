@@ -1,2 +1,2 @@
 # pyvmomi
-Python scripts for interacting with VMware
+Python scripts for interacting with VMware.
