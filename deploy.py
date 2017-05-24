@@ -191,7 +191,7 @@ def parentFolders(folder):
          folder = folder.parent
          depth = depth-1
       else:
-         print "Error: Specified folder is nested in too many subdirectories (max: 5)"
+         log("Error: Specified folder is nested in too many subdirectories (max: 5)")
          exit()
 
    return folderPath
@@ -214,8 +214,8 @@ def uploadOVF(folderPath, vm, DOWNLOAD):
    
    # Requires ovftool to be installed
    bashCommand = "ovftool --skipManifestCheck --noSSLVerify --disableVerification --datastore=AWC-004 --network='MGMT' --name=" + vm + " --vmFolder='" + folderPath + "' --diskMode=thin " + DOWNLOAD + "/NewOVF/USM_sensor-node.ovf vi://'" + user + "':" + pwd + "@" + host + ESXPATH
-   print "Info: Deploying", vm, "to", folderPath
-   #print bashCommand
+   log("Info: Deploying " + vm + " to " + folderPath)
+   log("Info: " + bashCommand)
    os.system(bashCommand) 
 
 
@@ -242,21 +242,21 @@ def modifyHardware(vm):
       MAC = args.mac
 
    if vm.runtime.powerState != "poweredOff":
-      print "Error: VM is not powered off. Current State is",vm.runtime.powerState
+      log("Error: VM is not powered off. Current State is " + vm.runtime.powerState)
       exit()
 
    if vm.config.template:
-      print "Error: Unable to change the hardware of a template"
+      log("Error: Unable to change the hardware of a template")
       exit()
 
-   print "Info: Changing CPU to", CPU, "and Memory to", RAM, "MB"
+   log("Info: Changing CPU and Memory to the sepcified values")
    cspec = vim.vm.ConfigSpec()
    cspec.numCPUs = CPU
    cspec.numCoresPerSocket = 1
    cspec.memoryMB = RAM
    vm.Reconfigure(cspec)
 
-   print "Info: Changing MAC of the first NIC to", MAC
+   log("Info: Changing MAC of the first NIC")
    for dev in vm.config.hardware.device:
       if dev.deviceInfo.label == 'Network adapter 1':
         virtual_nic_device = dev
@@ -283,7 +283,7 @@ def currentSensor():
  
    # Run a curl command to see when the ZIP file containing the sensor was last updated
    # http://stackoverflow.com/questions/4256107/running-bash-commands-in-python
-   bashCommand = 'curl -s -I ' + URL
+   bashCommand = 'curl -s -I ' + URL 
    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
    curloutput = process.communicate()[0]
 
@@ -291,9 +291,7 @@ def currentSensor():
    # Read the output and find the Date.
    for item in curloutput.split("\n"):
       if "Last-Modified" in item:
-        #print item
         match = re.search('Last-Modified:\s\w{3},\s(\d\d)\s(\w\w\w)\s(\d\d\d\d)\s\d\d:\d\d:\d\d\s\w\w\w', item)
-        #print match
         if match:
            day = match.group(1)
            month = match.group(2)
@@ -301,13 +299,12 @@ def currentSensor():
            current_date = day + "-" + month + "-" + year
            current_sensor_date = datetime.strptime(current_date, '%d-%b-%Y')
            current_sensor = current_sensor_date.strftime('%Y-%m-%d')
-           #print "Latest Sensor is",current_sensor
            found = True
 
    if found: 
       return current_sensor
    else:
-      print "Error: Unable to access", URL
+      log("Error: Unable to access " + URL)
       exit()
 
 #########################################################################################################
@@ -322,7 +319,6 @@ def lastSensor(content, FOLDER):
    if folder is not None:
       listTemplates = ""
       templateList = []
-      #print folder.parent.name
       # We will add all of the childObjects of the folder to a variable
       vms = folder.childEntity
       # Iterate through the VMs in the folder printing the names
@@ -335,7 +331,7 @@ def lastSensor(content, FOLDER):
          if "USMA_Sensor" in template:
             match = re.search('\d\d\d\d-\d\d-\d\d', template)
          else:
-            print "Info: No Templates with the name USM_Sensor found"
+            log("Info: No Templates with the name USM_Sensor found")
             return "1970-01-01"
 
       # If it's a match add it to the list
@@ -351,7 +347,7 @@ def lastSensor(content, FOLDER):
       return last_sensor
 
    else:
-     print "Error: Folder", FOLDER, "not found"
+     log("Error: Folder " + FOLDER + " not found")
      return
 
 #########################################################################################################
@@ -360,7 +356,7 @@ def downloadSensor(download):
    global URL
 
    # Download the sensor
-   print "Info: Downloading sensor from", URL
+   log("Info: Downloading sensor from " + URL)
 
    # Create the directories we will use
    if not os.path.exists(download + '/ZIP'):
@@ -375,52 +371,38 @@ def downloadSensor(download):
 
    bashCommand = 'wget -O ' + download + '/ZIP/usm-anywhere-sensor-vmware.zip ' + URL
    #bashCommand = 'wget -O ' + download + '/usm-anywhere-sensor-vmware.zip https://hotel.zzzz.io/tmp/small.zip'
-   print "Info:", bashCommand
-   process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-   curloutput = process.communicate()[0]
-
+   log("Info: " + bashCommand)
+   #process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+   #curloutput = process.communicate()[0]  
+   #log("Info: " + curloutput)
 
    # unzip the sensor
-   print "Info: Unzipping", download, "/ZIP/usm-anywhere-sensor-vmware.zip"
+   log("Info: Unzipping " + download + "/ZIP/usm-anywhere-sensor-vmware.zip")
    bashCommand = 'unzip -o -d ' + download + '/OVF ' + download + '/ZIP/usm-anywhere-sensor-vmware.zip'
-   print "Info:", bashCommand
-   #process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-   #while process.poll() is None:
-   #   print process.stdout.readline() #give output from your execution/your own message
-   #self.commandResult = process.wait() #catch return code
-   #print "RETURN", self.commandResult
-   #curloutput = process.communicate()[0]
+   log("Info: " + bashCommand)
    os.system(bashCommand)
 
-   # mount the VMDK
    # Mount the vmdk to the vmdkMount directory
-   print "Info: Mounting VMDK to " + download + "/vmdkMount"
-   #bashCommand = 'vmware-mount ./alienvault-usm/usm-disk1.vmdk 1 /tmp/vmdkMount/'
-   #bashCommand = 'vmware-mount ' + download + '/alienvault-usm/usm-disk1.vmdk 1 /tmp/vmdkMount/'
+   log("Info: Mounting VMDK to " + download + "/vmdkMount")
    bashCommand = 'guestmount -a ' + download + '/OVF/alienvault-usm/usm-disk1.vmdk -i --rw ' + download + '/vmdkMount/'
-   print "Info:", bashCommand
-   #process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-   #print process.communicate()[0]
+   log("Info: " + bashCommand)
    os.system(bashCommand)
 
    # Read the version number and store it as a var
    if not os.path.exists(download + '/vmdkMount/etc/alienvault/system_version'):
-      print "Error: Could not access system_version file in disk mounted to " + download + "/vmdkMount"
-      print "Error: Perhaps the extraction of the downloaded zip file failed"
-      print "Error: Or perhaps the zip file was not a valid USM Anywhere Sensor"
+      log("Error: Could not access system_version file in disk mounted to " + download + "/vmdkMount")
+      log("Error: Perhaps the extraction of the downloaded zip file failed")
+      log("Error: Or perhaps the zip file was not a valid USM Anywhere Sensor")
       exit()
 
    with open(download + '/vmdkMount/etc/alienvault/system_version', 'r') as myfile:
       version=myfile.read().replace('\n', '')
-   print "Info: Version", version, "detected"
+   log("Info: Version " + version + " detected")
 
    # Unmount the vmdk
-   print "Info: Unmounting VMDK"
-   print "Info:", bashCommand
+   log("Info: Unmounting VMDK")
    bashCommand = 'guestunmount ' + download + '/vmdkMount'
-   #bashCommand = 'vmware-mount -d /tmp/vmdkMount/'
-   #process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-   #print process.communicate()[0]
+   log("Info: " + bashCommand)
    os.system(bashCommand)
 
    return version
@@ -438,25 +420,25 @@ def insertKey(DOWNLOAD):
    # Create subdirectory for vm
    if not os.path.exists(DOWNLOAD + '/VM'):
       os.makedirs(DOWNLOAD + '/VM')
-   print "Info: Created", DOWNLOAD + "/VM"
+   log("Info: Created " + DOWNLOAD + "/VM")
 
    # Convert to VM
    bashCommand = "ovftool " + DOWNLOAD + "/OVF/alienvault-usm/USM_sensor-node.ovf " + DOWNLOAD + "/VM/USM_sensor-node.vmx"
-   print "Info: Converting to VM...."
-   print "Info:", bashCommand
+   log("Info: Converting to VM....")
+   log("Info: " + bashCommand)
    os.system(bashCommand)
 
    # Delete orginal ovf 
    bashCommand = "rm -rf " + DOWNLOAD + "/OVF"
-   print "Info: Removing orginal OVF"
-   print "Info:", bashCommand
+   log("Info: Removing orginal OVF")
+   log("Info: " +  bashCommand)
    os.system(bashCommand)
 
 
    # Mount ovf
    bashCommand = 'guestmount -a ' + DOWNLOAD + '/VM/USM_sensor-node-disk1.vmdk -i --rw ' + DOWNLOAD + '/vmdkMount/'
-   print 'Info: Mounting read/write'
-   print "Info:", bashCommand
+   log('Info: Mounting read/write')
+   log("Info: " + bashCommand)
    os.system(bashCommand)
 
    # Create folder and file with text
@@ -464,26 +446,27 @@ def insertKey(DOWNLOAD):
    f = open(DOWNLOAD + '/vmdkMount/home/sysadmin/.ssh/authorized_keys','w')
    f.write(SSH_KEY)
    f.close()
-   print 'Info: Wrote the SSH key'
+   log('Info: Wrote the SSH key')
 
    # Unmount folder
+   log("Info: Unmounting the disk")
    bashCommand = 'guestunmount ' + DOWNLOAD + '/vmdkMount/'
    os.system(bashCommand)
-   print 'Info: Unmounted the mount'
+   log('Info: Unmounted the mount')
 
    # Convert to new ovf in subfolder
    if not os.path.exists(DOWNLOAD + '/NewOVF'):
       os.makedirs(DOWNLOAD + '/NewOVF')
-   print "Info: Created ", DOWNLOAD + "/NewOVF"
+   log("Info: Created " + DOWNLOAD + "/NewOVF")
 
-   print "Info: Repackaging the VM into a new OVF"
+   log("Info: Repackaging the VM into a new OVF")
    bashCommand = "ovftool " + DOWNLOAD + "/VM/USM_sensor-node.vmx " + DOWNLOAD + "/NewOVF/USM_sensor-node.ovf"
    os.system(bashCommand)
 
    # Delete VM file
    bashCommand = "rm -rf " + DOWNLOAD + "/VM"
-   print "Info: Removing the VM files"
-   print "Info:", bashCommand
+   log("Info: Removing the VM files")
+   log("Info: " +  bashCommand)
    os.system(bashCommand)
 
 
@@ -492,11 +475,21 @@ def insertKey(DOWNLOAD):
 def cleanup(DOWNLOAD):
    # Delete orginal ovf and VM files
    bashCommand = "rm -rf " + DOWNLOAD + "/VM; rm -rf " + DOWNLOAD + "/NewOVF; rm -rf " + DOWNLOAD + "/vmdkMount; rm -rf " + DOWNLOAD + "/OVF"
-   print "Info:", bashCommand
+   log("Info: " +  bashCommand)
    os.system(bashCommand)
 
 
 #########################################################################################################
+
+def log(text):
+   f = open('/var/log/deploy.log','a')
+   data = datetime.now().strftime('%Y-%m-%d %H:%M:%S') + " " + text + "\n"
+   f.write(data)
+   f.close()
+
+
+#########################################################################################################
+
 
 def main():
     """
@@ -515,10 +508,13 @@ def main():
         #connect.Disconnect(service_instance)
 	
 	session_name = service_instance.content.sessionManager.currentSession.fullName
-	print "Info: vCenter time: {}".format(service_instance.CurrentTime())
-        print ""
-        print "Hello {}".format(session_name)
-        print "You have successfully logged into {}".format(args.host)
+	#print "Info: vCenter time: {}".format(service_instance.CurrentTime())
+        #print ""
+        #print "Hello {}".format(session_name)
+        #print "You have successfully logged into {}".format(args.host)
+	log(" ")
+        log(" ")
+        log("Info: Logging in as " + session_name)
 	#print "Info: Session key", service_instance.content.sessionManager.currentSession.key
 
 	FOLDER = args.folder
@@ -530,21 +526,21 @@ def main():
         #Check current sensor release date
         current_sensor = currentSensor()
         if current_sensor is not None:
-           print "Info: Latest sensor online is:", current_sensor
+           log("Info: Latest sensor online is: " + current_sensor)
         else:
-           print "Error: Unable to determine latest sensor"
+           log("Error: Unable to determine latest sensor")
            return -1
 
 	# Send the content to lastSensor which will use it to search the folder for the latest sensor
         last_sensor = lastSensor(content, FOLDER)
         if last_sensor is not None:
-           print "Info: Last sensor in the specified folder is", last_sensor
+           log("Info: Last sensor in the specified folder is " + last_sensor)
         else:
-           print "Error: Previous sensor not found"
+           log("Error: Previous sensor not found")
            return -1
 
         if current_sensor > last_sensor:
-           print "Info: Update Required"
+           log("Info: Update Required")
 
 	   # get_obj is defined above. It searchs through the content for the specified object
 	   folder = get_obj(content, [vim.Folder], FOLDER)
@@ -555,7 +551,6 @@ def main():
 	
 	      # The download & upload will take a while so lets close out the vCenter connection as it times out after 15 minutes
               connect.Disconnect(service_instance)
-	      #print "Info: Logged Out"
 	      
               # Download the new sensor and mount it to get the version number
 	      version = downloadSensor(DOWNLOAD)
@@ -564,7 +559,7 @@ def main():
    	      insertKey(DOWNLOAD) 
 	      
               new_template = "USMA_Sensor-" + version + "-" + current_sensor
-              print "Info: New template name will be", new_template
+              log("Info: New template name will be" + new_template)
 	      uploadOVF(folderPath, new_template, DOWNLOAD)
 	      #uploadOVF(newOVFPath, new_template, DOWNLOAD)
 
@@ -576,31 +571,26 @@ def main():
 
               atexit.register(connect.Disconnect, service_instance)
 
-              #print "Info: Session key", service_instance.content.sessionManager.currentSession.key
-              #print "Info: Username", service_instance.content.sessionManager.currentSession.userName
-              #print ""
-              #print " "
-
 
               # This dumps all of the vCenter data into an object
               content = service_instance.RetrieveContent()
  
            else:
-              print "Error: Folder", FOLDER, "not found"
+              log("Error: Folder " + FOLDER + " not found")
               return -1
 
            vm = get_vm_in_folder(content, [vim.VirtualMachine], new_template, FOLDER)
 	   # If we found the specified VM we will edit it's hardware
 	   if vm is not None:
-	      print "Info: Found", vm.name, "in", vm.parent.name
+	      log("Info: Found"  + vm.name + " in " + vm.parent.name)
 	      if vm.parent.name == FOLDER:
 	         modifyHardware(vm)
                  vm.MarkAsTemplate()
 	      else:
-	         print "Error:", vm.name, "was not found in", FOLDER 
+	         log("Error: " + vm.name + " was not found in " + FOLDER)
 	         return -1
 	   else:
-              print "Error:", new_template, "not found"
+              log("Error: " + new_template + " not found")
               return -1
         
 
@@ -609,13 +599,13 @@ def main():
            cleanup(DOWNLOAD)
 
         else:
-           print "Info: No update required"
+           log("Info: No update required")
            return 0
 
 
     except vmodl.MethodFault as error:
         #print "Caught vmodl fault : " + error.msg
-        print error.msg
+        log(error.msg)
 	return -1
 
     return 0
