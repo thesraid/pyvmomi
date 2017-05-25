@@ -486,6 +486,7 @@ def log(text):
    data = datetime.now().strftime('%Y-%m-%d %H:%M:%S') + " " + text + "\n"
    f.write(data)
    f.close()
+   print text
 
 
 #########################################################################################################
