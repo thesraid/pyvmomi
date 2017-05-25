@@ -2,6 +2,7 @@
 
 """
 Program to download the latest USMA sensor and deploy it as a smaller template
+The linux machine will need ~10GB space for downloads
 The system that runs this application will need the following applications installed
 python: 			apt install python
 python package installer:	apt install python-pip
