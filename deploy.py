@@ -249,14 +249,14 @@ def modifyHardware(vm):
       log("Error: Unable to change the hardware of a template")
       exit()
 
-   log("Info: Changing CPU and Memory to the sepcified values")
+   log("Info: Changing CPU to " + str(CPU) + "and Memory to " + str(RAM))
    cspec = vim.vm.ConfigSpec()
    cspec.numCPUs = CPU
    cspec.numCoresPerSocket = 1
    cspec.memoryMB = RAM
    vm.Reconfigure(cspec)
 
-   log("Info: Changing MAC of the first NIC")
+   log("Info: Changing MAC of the first NIC to " + str(MAC))
    for dev in vm.config.hardware.device:
       if dev.deviceInfo.label == 'Network adapter 1':
         virtual_nic_device = dev
@@ -372,9 +372,9 @@ def downloadSensor(download):
    bashCommand = 'wget -O ' + download + '/ZIP/usm-anywhere-sensor-vmware.zip ' + URL
    #bashCommand = 'wget -O ' + download + '/usm-anywhere-sensor-vmware.zip https://hotel.zzzz.io/tmp/small.zip'
    log("Info: " + bashCommand)
-   #process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-   #curloutput = process.communicate()[0]  
-   #log("Info: " + curloutput)
+   process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+   curloutput = process.communicate()[0]  
+   log("Info: " + curloutput)
 
    # unzip the sensor
    log("Info: Unzipping " + download + "/ZIP/usm-anywhere-sensor-vmware.zip")
@@ -475,6 +475,7 @@ def insertKey(DOWNLOAD):
 def cleanup(DOWNLOAD):
    # Delete orginal ovf and VM files
    bashCommand = "rm -rf " + DOWNLOAD + "/VM; rm -rf " + DOWNLOAD + "/NewOVF; rm -rf " + DOWNLOAD + "/vmdkMount; rm -rf " + DOWNLOAD + "/OVF"
+   log("Cleaning up temporary directories, except for the ZIP file which I will overwrite the next time")
    log("Info: " +  bashCommand)
    os.system(bashCommand)
 
@@ -607,6 +608,7 @@ def main():
     except vmodl.MethodFault as error:
         #print "Caught vmodl fault : " + error.msg
         log(error.msg)
+        cleanup(DOWNLOAD)
 	return -1
 
     return 0
