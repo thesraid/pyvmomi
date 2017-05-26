@@ -568,7 +568,7 @@ def main():
 	      # Convert the OVF to a VM so we can insert the SSH key for sysadmin
    	      insertKey(DOWNLOAD) 
 	      
-              new_template = "USMA_Sensor-" + version + "-" + current_sensor
+              new_template = "USMA_Sensor-" + version + "-" + current_sensor + "-JailBroken"
               log("Info: New template name will be" + new_template)
 	      uploadOVF(folderPath, new_template, DOWNLOAD)
 	      #uploadOVF(newOVFPath, new_template, DOWNLOAD)
