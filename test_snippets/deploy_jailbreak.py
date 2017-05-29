@@ -373,9 +373,9 @@ def downloadSensor(download):
    bashCommand = 'wget -O ' + download + '/ZIP/usm-anywhere-sensor-vmware.zip ' + URL
    #bashCommand = 'wget -O ' + download + '/usm-anywhere-sensor-vmware.zip https://hotel.zzzz.io/tmp/small.zip'
    log("Info: " + bashCommand)
-   process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-   curloutput = process.communicate()[0]  
-   log("Info: " + curloutput)
+   #process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+   #curloutput = process.communicate()[0]  
+   #log("Info: " + curloutput)
 
    # unzip the sensor
    log("Info: Unzipping " + download + "/ZIP/usm-anywhere-sensor-vmware.zip")
