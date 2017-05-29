@@ -127,6 +127,16 @@ def get_args():
                         action='store',
                         help='Sensor download directory')
 
+    parser.add_argument('-z', '--nozip',
+                        required=False,
+                        action='store_true',
+                        help='Use an existing ZIP file in the download directory')
+
+    parser.add_argument('-j', '--jailbreak',
+                        required=False,
+                        action='store_true',
+                        help='Jailbreak the root account')
+
 
     args = parser.parse_args()
 
@@ -352,12 +362,9 @@ def lastSensor(content, FOLDER):
      return
 
 #########################################################################################################
-def downloadSensor(download):
+def downloadSensor(download, nozip):
 
    global URL
-
-   # Download the sensor
-   log("Info: Downloading sensor from " + URL)
 
    # Create the directories we will use
    if not os.path.exists(download + '/ZIP'):
@@ -369,13 +376,24 @@ def downloadSensor(download):
    if not os.path.exists(download + '/vmdkMount'):
       os.makedirs(download + '/vmdkMount')
 
+   if not nozip:
+      # Download the sensor
+      log("Info: Downloading sensor from " + URL)
 
-   bashCommand = 'wget -O ' + download + '/ZIP/usm-anywhere-sensor-vmware.zip ' + URL
-   #bashCommand = 'wget -O ' + download + '/usm-anywhere-sensor-vmware.zip https://hotel.zzzz.io/tmp/small.zip'
-   log("Info: " + bashCommand)
-   process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-   curloutput = process.communicate()[0]  
-   log("Info: " + curloutput)
+
+      bashCommand = 'wget -O ' + download + '/ZIP/usm-anywhere-sensor-vmware.zip ' + URL
+      #bashCommand = 'wget -O ' + download + '/usm-anywhere-sensor-vmware.zip https://hotel.zzzz.io/tmp/small.zip'
+      log("Info: " + bashCommand)
+      process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+      curloutput = process.communicate()[0]  
+      log("Info: " + curloutput)
+   
+   elif not os.path.exists(download + '/ZIP/usm-anywhere-sensor-vmware.zip'):
+      log("Info: " + download + "/ZIP/usm-anywhere-sensor-vmware.zip not found!")
+      exit()
+
+   else:
+      log("Info: Using existing zip file in " + download + "/ZIP")
 
    # unzip the sensor
    log("Info: Unzipping " + download + "/ZIP/usm-anywhere-sensor-vmware.zip")
@@ -414,7 +432,7 @@ def downloadSensor(download):
 
 #########################################################################################################
 
-def insertKey(DOWNLOAD):
+def insertKey(DOWNLOAD, jailbreak):
 
    SSH_KEY = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDNeK3OFirnHQaAkkGTcRSsTGjWQNqvr758+tQnq2Q5WtIJjH/zRqHC2t7JPeJXlIbgFe+/BsRUC0W6Yurdca/V9wFpwdJNFjdHhc3sKFMoPHT9cV7x1tahyjAFbzPPxCFVJdtAIDsayGFeN2luugehzB9rxaE5hdd3zr7ky+cAde7ComB58iGBSD1i72FIkW/aj39PEU6f86ignOvZBXaAcziYUI4/qSEBiHDpSU7u+Wm8ZeNOdonVPh4oMT0eKczEVd5RSw9YcdfRrW5qdbESolYAlGF28LIf92qVSrGcmfsOmiU7HQvlAHUAcOp+HPrARsLWCn8O1ho34m6UretR joriordan@alienvault.com"
 
@@ -448,6 +466,15 @@ def insertKey(DOWNLOAD):
    f.write(SSH_KEY)
    f.close()
    log('Info: Wrote the SSH key')
+
+   # Create folder and file with text
+   if jailbreak:
+      os.makedirs(DOWNLOAD + '/vmdkMount/root/.ssh')
+      f = open(DOWNLOAD + '/vmdkMount/root/.ssh/authorized_keys','w')
+      f.write(SSH_KEY)
+      f.close()
+      log('Info: Wrote the SSH key for root')
+
 
    # Unmount folder
    log("Info: Unmounting the disk")
@@ -522,6 +549,8 @@ def main():
 
 	FOLDER = args.folder
         DOWNLOAD = args.download
+        NOZIP = args.nozip
+        JAILBREAK = args.jailbreak
 
 	# This dumps all of the vCenter data into an object
 	content = service_instance.RetrieveContent()
@@ -556,10 +585,10 @@ def main():
               connect.Disconnect(service_instance)
 	      
               # Download the new sensor and mount it to get the version number
-	      version = downloadSensor(DOWNLOAD)
+	      version = downloadSensor(DOWNLOAD, NOZIP)
 
 	      # Convert the OVF to a VM so we can insert the SSH key for sysadmin
-   	      insertKey(DOWNLOAD) 
+   	      insertKey(DOWNLOAD, JAILBREAK) 
 	      
               new_template = "USMA_Sensor-" + version + "-" + current_sensor
               log("Info: New template name will be" + new_template)
