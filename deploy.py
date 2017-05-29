@@ -11,6 +11,37 @@ guestmount:			apt install libguestfs-tools
 ovftool:			https://my.vmware.com/group/vmware/details?productId=614&downloadGroup=OVFTOOL420
 				install with --console
 unzip:				apt install unzip
+
+private key for student/root access:
+
+-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAzXitzhYq5x0GgJJBk3EUrExo1kDar6++fPrUJ6tkOVrSCYx/
+80ahwtreyT3iV5SG4BXvvwbEVAtFumLq3XGv1fcBacHSTRY3R4XN7ChTKDx0/XFe
+8dbWocowBW8zz8QhVSXbQCA7GshhXjdpbroHocwfa8WhOYXXd86+5MvnAHXuwqJg
+efIhgUg9Yu9hSJFv2o9/TxFOn/OooJzr2QV2gHM4mFCOP6khAYhw6UlO7vlpvGXj
+TnaJ1T4eKDE9HinMxFXeUUsPWHHX0a1uanWxEqJWAJRhdvCyH/dqlUqxnJn7Dpol
+Ox0L5QB1AHDqfhz6wEbC1gp/DtYaN+JulK3rUQIDAQABAoIBAGHX3awNklCL2dTP
+0LpNVvLVT/b22yxeG++X4f8h9o/5V5uEdEl8kPshDoX2Ghpqd++tgoUMy+DZnVKs
+V/srb/gLr3iU+3gJ5DkC1pRmf3LhlzQ5EGVJUNuqVEPCOIHve4/4fveCYaLXWMZs
+zKAVphy9/xhq++NQgNJkeTKqhk4I/2BT3Cd6bunjPRQ6+zalONane4Nr0wQSzpRm
+VWFdFEc2W9UMo1TcDhKp6zqhngRwvc3BuVz0r0olNSBkEu7VTrSc9wZUjl4t4ufb
+2ou6wPalBfzIbtU+ADLg2T6N0wWQyoPurdxowGK1cLomBAA0a/yviCaMunN4qD9s
+JBNnwyECgYEA+vfcPv+w5+aANi6sIwjhAtaVHU6FBchUEA9pqURVPhGDPyC1GnXn
+yLwxsO9bLihmRIHxJgoKAwqb6NZ2GEgcAtJWRgZnJRfr8k1Tfq8b47QfE0xZz7lT
+BALY6+Qg9kTeqEchFQxgA1AWf5PqSDAiP09ulKpQC1cC++xYErQlX8MCgYEA0ZdM
+S6WDQZNIVPkigFGqp7enjBvrMKC2vVLAVmbczHJDOgNy0+pPVN5wsFIGE1ayGgTY
+TGeMhC0ZQa0ivLt5XfpNdgJ6OLdVZDCwzZxVK4dIKSlQuHpgihQvhfsx2zVQOVgI
+gMSzeorkJ9OhwIGfSIYT7KDDCmO8DcHTLE2ii1sCgYBKzr0Q7kh+J4AKJola/BeO
+MAZMsQ4HtjoQe3ekY+EA2lmD5Kz3ETQg6q/pLL/CF3q8avtFunJXi78DfYHAJSZs
+VOQwhVIThXjoRdJgjbPDgPpOV1DiETzEklC0p9CHd+niwSkETCcGdcXvC1knYWmj
+83pjyAyKBMq36zApixck3wKBgGmA/dj+gioaV8jeeG2brooqut6ely+tVw/KfiOA
+OBl6Uzj6z2y5gCG6r4MyZviJJbJPSgp7/ZHzmckjvF7BCIE0JJYI/TlboFKE6Bs4
+XO9CdCK0N3wFrl8TdjC9mAU+uxmCpRUc7zP6gotBzyS2m1XImHL/Ie8y8VEDhqfA
+lNgNAoGBAILVG3WC6zX2YRIQTLlq9I4/URngoxzUz3Vn9oIKeVgHH1OQm9YzE2mA
+k46uPvzYLL/F1hcjmIvQtlqpqjfneN8vIPfmZvVOrq0XQqgbcoZ0R2GQe+ZSSxvs
+OQ4jEY7uUDbmuXU+IHgfNvJKbJQiUtyLE3cmJWLYcscmuP1Ebbe6
+-----END RSA PRIVATE KEY-----
+
 """
 
 import sys
