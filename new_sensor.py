@@ -142,7 +142,7 @@ def login(domain, user, pwd, home):
       print bashCommand
       print "Info: Successfully logged into " + domain
       output = subprocess.check_output(bashCommand, shell=True)
-      print output
+      #print output
    except subprocess.CalledProcessError as bashError:
       print "Error: Error while executing bash command"
       print "Error: " + bashCommand
@@ -237,7 +237,7 @@ def main():
             time.sleep(15)
             json_data, output = runCommand(bashCommand)
          elif json_data['status'] != "connected":
-            print "Info: Connecting " + name + " to " + domain + "..."
+            print "Info: Waiting for " +  domain + " to start..."
             time.sleep(15)
             json_data, output = runCommand(bashCommand)
          elif json_data['status'] == "connected":
