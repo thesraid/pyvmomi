@@ -184,7 +184,7 @@ def main():
    name=args.name
    desc=args.desc
 
-   # Make a directory in the users home to store cookies and other tempoary files
+   # Make a directory in the users home to store cookies and other temp files
    home = expanduser("~")
    if not os.path.exists(home + '/.sensor'):
       os.makedirs(home + '/.sensor')
@@ -212,6 +212,7 @@ def main():
    json_data, output = runCommand(bashCommand)
    if not json_data:
       print "Info: Started connection to " + domain
+      print output
    else:
       print "Error: " + output
         
@@ -221,7 +222,7 @@ def main():
    #while (not json_data or json_data['status'] != "connected"):
    while (not connected):
       if not json_data:
-         print "Info: Connecting " + name + " to " + domain + "..."
+         print "Info: Waiting for " + name + " to connect to " + domain + "..."
          time.sleep(60)
          json_data, output = runCommand(bashCommand)
       elif json_data:
