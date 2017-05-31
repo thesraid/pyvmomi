@@ -354,38 +354,39 @@ def lastSensor(content, FOLDER):
    """
    Find the latest sensor in the specified folder
    """
-
+   
+   log("Info: Searching " + FOLDER + " for the latest sensor")
    # Print list of VMs in the specified folder
    folder = get_obj(content, [vim.Folder], FOLDER)
    # If the folder was found list it's contents
    if folder is not None:
-      listTemplates = ""
+      listTemplates = []
       templateList = []
       # We will add all of the childObjects of the folder to a variable
       vms = folder.childEntity
       # Iterate through the VMs in the folder printing the names
       for vm in vms:
-         #name = vm.name
-         listTemplates = listTemplates + vm.name
+         log("Info: Found a VM called " + vm.name)
+         #listTemplates = listTemplates + vm.name
+         listTemplates.append(vm.name)
 
       # Search the results for the date portion of the template name
-      for template in listTemplates.split("\n"):
+      #for template in listTemplates.split("\n"):
+      for template in listTemplates:
          if "USMA_Sensor" in template:
             match = re.search('\d\d\d\d-\d\d-\d\d', template)
+            date_string = match.group()
+	    date = datetime.strptime(date_string, '%Y-%m-%d')
+	    templateList.append(date)
          else:
             log("Info: No Templates with the name USM_Sensor found")
             return "1970-01-01"
-
-      # If it's a match add it to the list
-      if match:
-        date_string = match.group()
-        date = datetime.strptime(date_string, '%Y-%m-%d')
-        templateList.append(date)
 
       # Find the latest date
       last_sensor_date = max(templateList)
       last_sensor = last_sensor_date.strftime('%Y-%m-%d')
 
+     
       return last_sensor
 
    else:
