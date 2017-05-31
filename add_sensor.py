@@ -183,7 +183,8 @@ def main():
    pwd=args.password
    name=args.name
    desc=args.desc
-   """
+   
+   
    # Make a directory in the users home to store cookies and other temp files
    home = expanduser("~")
    if not os.path.exists(home + '/.sensor'):
@@ -216,7 +217,8 @@ def main():
    else:
       print "Error: " + output
       
-   """  
+   
+   
    # Wait while the connection is in progress
    bashCommand = 'curl -s -k -X GET -H "Content-Type: application/json" "http://' + sensor + '/api/1.0/status"'
    connected = False
