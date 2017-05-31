@@ -1,25 +1,14 @@
 #!/usr/bin/env python
 
 """
-"""
+Script to connect a sesnor to a new controller
+Script will login with the specified account and password
+Sensor will be marked as configured
+
+joriordan@alienvault.com
+2017-05-31
 
 """
-import sys
-import os
-import subprocess
-import syslog
-import time
-import re
-import atexit
-import argparse
-import getpass
-from datetime import date, datetime, timedelta
-from shutil import copyfile
-from pyVim import connect
-from pyVmomi import vmodl
-from pyVmomi import vim
-"""
-
 import re
 import argparse
 import getpass
@@ -88,7 +77,9 @@ def get_args():
 #########################################################################################################
 def runCommand(bashCommand):
 
-   #print "Command: " + bashCommand
+   # Runs the command and returns the json output and the raw output
+   # If there is no json data we retun false for that variable
+   # If the bash command fails we print some error data and exit
 
    try: # Try and run the command, if it doesn't work then except subprocess will catch it and return 1 
       output = subprocess.check_output(bashCommand, shell=True)
@@ -98,10 +89,10 @@ def runCommand(bashCommand):
             print "Error: " + json_data['error']
             exit()
          else:
-            return json_data, output
-      except ValueError, e:
-         return False, output
-   except subprocess.CalledProcessError as bashError:         
+            return json_data, output # Else if it's not an error return the json and raw data
+      except ValueError, e: # If the json data isn't valid data
+         return False, output # Return false and the raw output
+   except subprocess.CalledProcessError as bashError: # If the bash command fails give an error and exit
       print "Error: Error while executing bash command"
       print "Error: " + bashCommand                                                                                          
       print "Error: Code", bashError.returncode, bashError.output
@@ -142,7 +133,7 @@ def login(domain, user, pwd, home):
       print bashCommand
       print "Info: Successfully logged into " + domain
       output = subprocess.check_output(bashCommand, shell=True)
-      #print output
+      # If the bash command fails print and error and exit
    except subprocess.CalledProcessError as bashError:
       print "Error: Error while executing bash command"
       print "Error: " + bashCommand
@@ -153,6 +144,10 @@ def login(domain, user, pwd, home):
 
 #########################################################################################################
 def findJSONKey(bashCommand, search_key, search_string, key):
+
+   # Search Key : Key you have data for i.e. "name"
+   # Search String: Data for the key you know i.e. "Prod-Sensor"
+   # Key: Key you want to get the data for i.e. "uuid"
    
    json_data, output = runCommand(bashCommand)  
    
@@ -162,7 +157,7 @@ def findJSONKey(bashCommand, search_key, search_string, key):
    else:
       for obj in json_data:
          if obj[search_key] == search_string:
-            print "Info:  The " + search_key + " with the value " + search_string + " has a " + key + " with a value of " + obj[key]
+            #print "Info:  The " + search_key + " with the value " + search_string + " has a " + key + " with a value of " + obj[key]
             obj_string = obj[key]
 
    return obj_string
@@ -170,10 +165,14 @@ def findJSONKey(bashCommand, search_key, search_string, key):
 #########################################################################################################
 def main():
 
+   # Variable to store the password token. 
+   # This is a token we get when we deploy the sensor which will allow us to set the inital password
    PWDTOKEN = "EMPTY"
 
+   # Get the command line argumants and store them in the args variable
    args = get_args()
 
+   # Assign each argument to a variable
    key=args.key
    sensor=args.sensor
    domain=args.domain
@@ -189,15 +188,15 @@ def main():
 
    # Check if the sensor is already connected to something
    # If it is we will exit
-   bashCommand = 'curl -s -k -X GET "http://' + sensor + '/api/1.0/status"'
-   json_data, output = runCommand(bashCommand)
-   if json_data:
-      if json_data['status'] == 'notConnected':
+   bashCommand = 'curl -s -k -X GET "http://' + sensor + '/api/1.0/status"' # The command to run
+   json_data, output = runCommand(bashCommand) # Run the command and receive the json and raw output. json = false if no json received
+   if json_data: # If we received json data...
+      if json_data['status'] == 'notConnected': # If the value for the status key is notConnected
          print "Info: " + sensor + " is not connected to a controller"
-      else:
-         print "Info: " + sensor + " is already connected to " + json_data['masterNode']
+      else: # If the value for the status key is something other than connected
+         print "Info: " + sensor + " is already connected to " + json_data['masterNode'] # Print the name of the controller it's connected to
          exit()
-   else:
+   else: # If we did not recive json data print the output and exit
       print "Error: No valid json output received"
       print "Error: This may mean the Web service on "  + sensor + " has not started yet"
       print output
@@ -206,58 +205,56 @@ def main():
    # Connect the sensor to the controller using the key
    print "Info: Starting connection"
    bashCommand = 'curl -s -k -X POST -H "Content-Type: application/json" -d \'{"key":"' + key + '","name":"' + name + '","description":"' + desc + '"}\' "http://' + sensor + '/api/1.0/activate"'
-   json_data, output = runCommand(bashCommand)
-   if not json_data:
-      print "Info: Started connection to " + domain
-      print output
-   else:
-      print "Info: " + output
+   json_data, output = runCommand(bashCommand)  # Run the command and receive the json and raw output. json = false if no json received
+   print output # Just print the output. There is no error checking as I don't know what an error looks like as I didn't have enough licenses to test errors. Later checks will fail better
 
-   # Wait while the connection is in progress
+   # Get the current status of the connection
    bashCommand = 'curl -s -k -X GET -H "Content-Type: application/json" "http://' + sensor + '/api/1.0/status"'
    json_data, output = runCommand(bashCommand)    
-   connected = False
-   #while (not json_data or json_data['status'] != "connected"):
-   while (not connected):
-      if not json_data:
+   connected = False # Set a boolean that we will mark as true when connected
+   # Wait while the connection is in progress
+   while (not connected): # While we are not connected
+      if not json_data: # If we don't recieve json data that's okay as sometimes we get a bad gateway error back but everything is still ok
          print "Info: Waiting for " + name + " to connect to " + domain + "..."
          time.sleep(15)
-         json_data, output = runCommand(bashCommand)
-      elif json_data:
+         json_data, output = runCommand(bashCommand) # run the status check command again
+      elif json_data: # If we do jet json data back let's have a look at some keys
          if 'error' in json_data: # If something goes wrong the json will have a key called error. Print it's contents and exit
             print "Error: " + json_data['error']
             exit()
-         elif json_data['status'] == "connectedConfiguring":
+         elif json_data['status'] == "connectedConfiguring": # If the status is connectedConfiguring grab the password reset token that's included with the json
             print "Info: connected Configuring"
-            if json_data['resetToken']:
-               print "Info: Token data found"
-               print json_data['resetToken']
-               print output
-               PWDTOKEN = json_data['resetToken']
+            if json_data['resetToken']: # Make sure the token is present. Sometimes connectedConfiguring won't have it
+               #print "Info: Token data found"
+               #print json_data['resetToken']
+               #print output
+               PWDTOKEN = json_data['resetToken'] # Save the token for later
             time.sleep(15)
-            json_data, output = runCommand(bashCommand)
-         elif json_data['status'] != "connected":
+            json_data, output = runCommand(bashCommand) # Run the check status command again as we still haven't connected
+         elif json_data['status'] != "connected": # If the status is anything other than connected print a wait message
             print "Info: Waiting for " +  domain + " to start..."
             time.sleep(15)
-            json_data, output = runCommand(bashCommand)
-         elif json_data['status'] == "connected":
+            json_data, output = runCommand(bashCommand) # Run the check status command again as we still haven't connected
+         elif json_data['status'] == "connected": # We have connected
             print "Info: Connected!"
             print output
-            print "AV-Action-Token: " + PWDTOKEN
-            connected = True
+            print "AV-Action-Token: " + PWDTOKEN # Print he token that we found in the connectedConfiguring stage
+            connected = True # Mark connected as true to break the while loop
 
 
 
-   # Login to the controller and get a token
+   # Try to login to the controller to set a cookie and get a token
+   # The login will fail as we have no password yet but we will get a good cookie
+   # The login function sets a cookie and tries to login. 
+   # It returns a token that will need to be included in all future API calls
    token = login(domain, user, pwd, home)
 
-   # Reset the password
+   # Reset the password using the AV-Action-Token that we save in the while loop while waiting for the sensor to connect
+   # The AV-Action-Token is sent as part of the header
    bashCommand = 'curl -s -k -X POST -H \'Content-Type: application/json\' -H "AV-Action-Token: ' + PWDTOKEN  + '" -H "X-XSRF-TOKEN: ' + token + '" -d \'{"password":"' + pwd + '"}\' "https://' + domain + '/api/1.0/token/passwordReset" -b ' + home + '/.sensor/cookie.txt -c ' + home + '/.sensor/cookie.txt'
    json_data, output = runCommand(bashCommand)
-   print "+++++++"
-   print "Output from password reset"
+   print "Info: Output from password reset"
    print output
-   print "+++++++"
 
    # Login to the controller and get a token
    token = login(domain, user, pwd, home)
