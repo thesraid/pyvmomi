@@ -379,7 +379,7 @@ def lastSensor(content, FOLDER):
 	    date = datetime.strptime(date_string, '%Y-%m-%d')
 	    templateList.append(date)
          else:
-            log("Info: No Templates with the name USM_Sensor found")
+            log("Info: No Templates with the name USMA_Sensor found")
             return "1970-01-01"
 
       # Find the latest date
