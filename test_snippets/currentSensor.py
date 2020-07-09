@@ -10,7 +10,7 @@ import syslog
 import time
 import re
 
-URL = "http://xdownloads.alienvault.cloud/usm-anywhere/sensor-images/usm-anywhere-sensor-vmware.zip"
+URL = "http://downloads.alienvault.cloud/usm-anywhere/sensor-images/usm-anywhere-sensor-vmware.zip"
 
 # Run a curl command to see when the ZIP file containing the sensor was last updated
 # http://stackoverflow.com/questions/4256107/running-bash-commands-in-python
